@@ -64,31 +64,36 @@ func (p *ProcessingTimes) ToLogField() Field {
 
 func main() {
 	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, time.Second*1)
+	defer cancel()
 	timer := NewTimer()
+	var address string
 	wait := sync.WaitGroup{}
-	wait.Add(2)
+	wait.Add(1)
 	go func() {
+		defer wait.Done()
 		ex := timer.Start("brasilApi")
+		//time.Sleep(time.Second * 1)
 		brasilApi, err := ExternalIntegration(ctx, http.MethodGet, "https://brasilapi.com.br/api/cep/v1/01153000")
 		ex.Stop()
 		if err != nil {
-			fmt.Println("brasil api error: ", err)
+			fmt.Println(err)
 		}
-		fmt.Println("brasilApi", brasilApi)
-		wait.Done()
+		address = brasilApi
 	}()
 	go func() {
+		defer wait.Done()
 		ex2 := timer.Start("viaCep")
+		//time.Sleep(time.Second * 1)
 		viaCep, err := ExternalIntegration(ctx, http.MethodPost, "http://viacep.com.br/ws/01153000/json/")
 		ex2.Stop()
 		if err != nil {
-			fmt.Println("via cep error: ", err)
+			fmt.Println(err)
 		}
-		fmt.Println("viaCep", viaCep)
-		wait.Done()
+		address = viaCep
 	}()
 	wait.Wait()
-	fmt.Println("processing Times: ", timer.ToLogField())
+	fmt.Println(address)
 }
 
 func ExternalIntegration(ctx context.Context, method string, url string) (string, error) {
@@ -96,28 +101,19 @@ func ExternalIntegration(ctx context.Context, method string, url string) (string
 	client := http.Client{}
 	req, err := http.NewRequestWithContext(ctx, method, url, nil)
 	if err != nil {
-		fmt.Println("new request error: ", err)
 		return address, err
 	}
 
 	res, err := client.Do(req)
 	if err != nil {
-		fmt.Println("http client error: ", err)
 		return address, err
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		fmt.Println("read body error: ", err)
 		return address, err
 	}
-
-	// err = json.Unmarshal(body, &address)
-	// if err != nil {
-	// 	fmt.Println("unmarshal error: ", err)
-	// 	return address, err
-	// }
 	address = string(body)
 
 	return address, nil

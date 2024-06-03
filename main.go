@@ -79,18 +79,18 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
-		address = brasilApi
+		address = "brasilAPI - " + brasilApi
 	}()
 	go func() {
 		defer wait.Done()
 		ex2 := timer.Start("viaCep")
 		//time.Sleep(time.Second * 1)
-		viaCep, err := ExternalIntegration(ctx, http.MethodPost, "http://viacep.com.br/ws/01153000/json/")
+		viaCep, err := ExternalIntegration(ctx, http.MethodGet, "http://viacep.com.br/ws/01153000/json/")
 		ex2.Stop()
 		if err != nil {
 			fmt.Println(err)
 		}
-		address = viaCep
+		address = "viaCep - " + viaCep
 	}()
 	wait.Wait()
 	fmt.Println(address)
